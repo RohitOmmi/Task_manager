@@ -218,18 +218,17 @@ function FormtoSheet() {
   // Fetch data from Google Sheets
   const fetchData = () => {
     const url =
-      "https://script.google.com/macros/s/AKfycbzVxj7PkeWsdiQ8TY7nfQnML239fvOz95DRBvHylGO7TZuDq0ZmrCm72gM5CNzfbUidGA/exec";
+      "https://script.google.com/macros/s/AKfycbwE3Fino0q6wwjG-gC9ufuHlhUMnIbO4UZA2ggNRYtfgPjwLtOwK1AeaxIgosZPBA696A/exec";
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        // Filter out completed tasks from UI
-        const filteredTasks = data.filter(
-          (task) => task.status !== "Completed"
-        );
+        // Ensure completed tasks are properly filtered
+        const filteredTasks = data.filter((task) => task.status !== "Completed");
         setTasks(filteredTasks);
       })
       .catch((error) => console.log("Error fetching data:", error));
   };
+  
 
   useEffect(() => {
     fetchData();
@@ -239,7 +238,7 @@ function FormtoSheet() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const url =
-      "https://script.google.com/macros/s/AKfycbzVxj7PkeWsdiQ8TY7nfQnML239fvOz95DRBvHylGO7TZuDq0ZmrCm72gM5CNzfbUidGA/exec";
+      "https://script.google.com/macros/s/AKfycbwE3Fino0q6wwjG-gC9ufuHlhUMnIbO4UZA2ggNRYtfgPjwLtOwK1AeaxIgosZPBA696A/exec";
     const formData = new URLSearchParams();
     formData.append("RequestRaisedBy", e.target.requestRaised.value);
     formData.append("Task", e.target.name.value);
@@ -263,15 +262,15 @@ function FormtoSheet() {
   };
 
   // Handle status update
-  const handleStatusChange = (e, taskIndex) => {
+  const handleStatusChange = (e, task) => {
     const newStatus = e.target.value;
     const newComment = prompt("Add a comment (optional):") || "";
-    const task = tasks[taskIndex];
   
     const url =
-      "https://script.google.com/macros/s/AKfycbzVxj7PkeWsdiQ8TY7nfQnML239fvOz95DRBvHylGO7TZuDq0ZmrCm72gM5CNzfbUidGA/exec";
+      "https://script.google.com/macros/s/AKfycbwE3Fino0q6wwjG-gC9ufuHlhUMnIbO4UZA2ggNRYtfgPjwLtOwK1AeaxIgosZPBA696A/exec";
   
     const formData = new URLSearchParams({
+      taskId: task.ID, // Ensure a unique identifier is used
       Task: task.Task,
       status: newStatus,
       Comments: newComment,
@@ -284,17 +283,14 @@ function FormtoSheet() {
       body: formData.toString(),
     })
       .then((res) => res.text())
-      .then((data) => {
-        console.log("Status Updated:", data);
-        // Dynamically update state by filtering out "Completed" tasks
-        setTasks((prevTasks) =>
-          prevTasks
-            .map((t, i) => (i === taskIndex ? { ...t, status: newStatus } : t))
-            .filter((t) => t.status !== "Completed") // Remove completed tasks from UI
-        );
+      .then(() => {
+        // Refetch data to reflect the correct status and hide completed tasks
+        fetchData();
       })
       .catch((error) => console.log(error));
   };
+  
+  
   
 
   return (
@@ -366,41 +362,28 @@ function FormtoSheet() {
               </tr>
             </thead>
             <tbody>
-              {tasks.length > 0 ? (
-                tasks
-                  .filter((task) => task.status !== "Completed") // Hide completed tasks
-                  .map((task, index) => (
-                    <tr
-                      key={index}
-                      className="border-t hover:bg-gray-100 transition"
-                    >
-                      <td className="p-1 text-center">{index + 1}</td>
-                      <td className="p-1 text-center">{task.Task}</td>
-                      <td className="p-1 text-center">{task.TaskAssignedto}</td>
-                      <td className="p-1 text-center">{task.priority}</td>
-                      <td className="p-1 text-center">
-                        <select
-                          value={task.status}
-                          onChange={(e) => handleStatusChange(e, index)}
-                          className="border rounded-md p-1"
-                        >
-                          <option value="Yet to Start">Yet to Start</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Completed">Completed</option>
-                        </select>
-                      </td>
-                      <td className="p-1 text-center">
-                        {task.Comments || "No Comments"}
-                      </td>
-                    </tr>
-                  ))
-              ) : (
-                <tr>
-                  <td colSpan="6" className="text-center p-3">
-                    No tasks available
-                  </td>
-                </tr>
-              )}
+            {tasks.map((task, index) => (
+  <tr key={task.ID} className="border-t hover:bg-gray-100 transition">
+    <td className="p-1 text-center">{index + 1}</td>
+    <td className="p-1 text-center">{task.Task}</td>
+    <td className="p-1 text-center">{task.TaskAssignedto}</td>
+    <td className="p-1 text-center">{task.priority}</td>
+    <td className="p-1 text-center">
+      <select
+        value={task.status}
+        onChange={(e) => handleStatusChange(e, task)}
+        className="border rounded-md p-1"
+      >
+        <option value="Yet to Start">Yet to Start</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+    </td>
+    <td className="p-1 text-center">
+      {task.Comments || "No Comments"}
+    </td>
+  </tr>
+))}
             </tbody>
           </table>
         </div>
